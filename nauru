@@ -1,0 +1,62 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          nauru
+# Required-Start:    $syslog $time
+# Required-Stop:     $syslog $time
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Keep files in tmpfs
+# Description:       It keeps files in tmpfs and periodically 
+#                    copies them to real filesystem.
+### END INIT INFO
+#
+# Author:	Bartosz P
+#
+
+PID_FILE=/tmp/nauru.pid
+DAEMON_SCRIPT=/home/bsp/devel/nauru/naurud.py
+DAEMON="python3 -u $DAEMON_SCRIPT $PID_FILE"
+REDIRECT=/dev/null
+
+case "$1" in
+  start)
+    echo "Starting: $DAEMON"
+    nohup $DAEMON < /dev/null 1> $REDIRECT 2> $REDIRECT &        
+    ;;
+  
+  stop)
+    echo "Stopping $DAEMON"        
+    CURR_PID=`cat $PID_FILE`
+    echo "PID: $CURR_PID"
+    if [ -n "$CURR_PID" ]; then
+      echo "Sending TERM"
+      kill $CURR_PID
+      KILL_RESULT=$?
+      if [ "$KILL_RESULT" = "0" ]; then
+        echo "Killed"
+        rm -f $PID_FILE   
+      else
+        echo "Failed to kill"
+      fi
+    fi    
+    ;;
+    
+  force-reload|restart)
+    $0 stop
+    $0 start
+    ;;
+  
+  status)
+    echo "PID file:"
+    ls -l $PID_FILE
+    cat $PID_FILE
+    echo
+    ;;
+    
+  *)
+    echo "Bad arguments!"
+    exit 1
+    ;;
+esac
+
+exit 0
