@@ -3,7 +3,7 @@ import os
 import sys
 import traceback
 
-log_file_name = '/tmp/nauru.log'
+log_file_name = '/var/log/nauru.log'
 
 def main():
   try:
@@ -11,8 +11,8 @@ def main():
       return
 
     while True:
-      log('dupppa')
-      time.sleep(5)
+      log('Nie ma co robić')
+      time.sleep(60)
         
   except:
     log('Exception!')
