@@ -13,22 +13,74 @@
 # Author:	Bartosz P
 #
 
+# Warning: no spaces allowed in paths
+ORIGINAL_DIR=/tmp/nd
+COPY_DIR=$ORIGINAL_DIR-nauru
+OWNER=bsp
 PID_FILE=/tmp/nauru.pid
 DAEMON_SCRIPT=/home/bsp/devel/nauru/naurud.py
 DAEMON="python3 -u $DAEMON_SCRIPT $PID_FILE"
 REDIRECT=/dev/null
 
+mount_tmpfs() {
+  if ! [ -d $ORIGINAL_DIR ]; then
+    echo "Orignal dir does not exist: $ORIGINAL_DIR"
+    return 1
+  fi
+  
+  echo "Mounting tmpfs in $ORIGINAL_DIR"    
+  mount -t tmpfs -o size=20m tmpfs $ORIGINAL_DIR
+}
+
+unmount_tmpfs() {
+  echo "Unmounting tmpfs from $ORIGINAL_DIR"
+  umount --lazy $ORIGINAL_DIR
+}
+
+# A file deleted in "original" dir will not be deleted from "copy" dir.
+save_in_copy_dir() {
+  mkdir -p $COPY_DIR
+  chown $OWNER $COPY_DIR
+  if [ $? -ne 0 ]; then
+    echo "Failed to create copy dir: $COPY_DIR"
+    return 1
+  fi
+  
+  echo "Saving files from $ORIGINAL_DIR to $COPY_DIR"
+  cp -a -t $COPY_DIR $ORIGINAL_DIR/*  
+}
+
+restore_from_copy_dir() {
+  echo "Restoring files from $COPY_DIR to $ORIGINAL_DIR"
+  cp -a -t $ORIGINAL_DIR $COPY_DIR/*  
+}
+
+
 case "$1" in
   start)
+    if [ -f $PID_FILE ]; then
+      echo "Error: PID file already exists"
+      exit 1
+    fi
+    
+    save_in_copy_dir || exit 1
+    mount_tmpfs || exit 1
+    restore_from_copy_dir
+    if [ $? -ne 0 ]; then
+      unmount_tmpfs
+      exit 1
+    fi
+    
     echo "Starting: $DAEMON"
     nohup $DAEMON < /dev/null 1> $REDIRECT 2> $REDIRECT &        
+    exit $?
     ;;
   
-  stop)
-    echo "Stopping $DAEMON"        
+  stop)       
     CURR_PID=`cat $PID_FILE`
     echo "PID: $CURR_PID"
     if [ -n "$CURR_PID" ]; then
+      echo "Stopping $DAEMON"     
       echo "Sending TERM"
       kill $CURR_PID
       KILL_RESULT=$?
@@ -37,7 +89,12 @@ case "$1" in
         rm -f $PID_FILE   
       else
         echo "Failed to kill"
+        exit 1
       fi
+            
+      save_in_copy_dir
+      unmount_tmpfs
+      restore_from_copy_dir
     fi    
     ;;
     
