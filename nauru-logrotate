@@ -1,0 +1,9 @@
+/var/log/nauru.log {
+	daily
+	rotate 5
+	missingok
+	notifempty
+	compress
+	create 644 bsp bsp
+}
+
