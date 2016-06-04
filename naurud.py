@@ -7,7 +7,7 @@ log_file_name = '/var/log/nauru.log'
 
 def main():
   try:
-    if(not check_pid(sys.argv[1])):
+    if(not check_and_create_pid(sys.argv[1])):
       return
 
     while True:
@@ -19,7 +19,7 @@ def main():
     log(traceback.format_exc())
  
     
-def check_pid(pid_file):
+def check_and_create_pid(pid_file):
   log('pid_file: {}'.format(pid_file))
   
   pid = os.getpid()
