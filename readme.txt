@@ -26,5 +26,3 @@ A: Because copying files and sleeping in shell runs a new process. There is noth
 
 In python part: copy only when source file is newer.
 
-Method save_in_copy_dir() in shell part need to have bool parameter 'update'. If false then copying is made without -u flag. This mode should be used when service is stopped. Because python script may be killed during copy and we want to ensure that no data is lost.
-

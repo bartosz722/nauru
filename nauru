@@ -39,8 +39,14 @@ unmount_tmpfs() {
 }
 
 # A file deleted in "original" dir will not be deleted from "copy" dir.
-# If destination file exists and is newer then it is kept (option -u of cp).
+# Parameter: pass 'update' to copy only newer (or non-existent) files.
 save_in_copy_dir() {
+  if [ "$1" = "update" ]; then
+    CP_UPDATE="-u"
+  else    
+    CP_UPDATE=
+  fi
+
   mkdir -p $COPY_DIR
   chown $OWNER $COPY_DIR
   if [ $? -ne 0 ]; then
@@ -48,13 +54,13 @@ save_in_copy_dir() {
     return 1
   fi
   
-  echo "Saving files from $ORIGINAL_DIR to $COPY_DIR"
-  cp -a -u -t $COPY_DIR $ORIGINAL_DIR/*  
+  echo "Saving files from $ORIGINAL_DIR to $COPY_DIR, update option: $CP_UPDATE"
+  cp -a $CP_UPDATE -t $COPY_DIR $ORIGINAL_DIR/*
 }
 
 restore_from_copy_dir() {
   echo "Restoring files from $COPY_DIR to $ORIGINAL_DIR"
-  cp -a -u -t $ORIGINAL_DIR $COPY_DIR/*  
+  cp -a -t $ORIGINAL_DIR $COPY_DIR/*
 }
 
 
@@ -65,7 +71,9 @@ case "$1" in
       exit 1
     fi
     
-    save_in_copy_dir || exit 1
+    # Use 'update' option becasue 'copy' dir may have newer version of files 
+    # (e.g. when system was incorrectly closed).
+    save_in_copy_dir update || exit 1
     mount_tmpfs || exit 1
     restore_from_copy_dir
     if [ $? -ne 0 ]; then
@@ -93,7 +101,9 @@ case "$1" in
         echo "Failed to kill"
         exit 1
       fi
-                  
+
+      # Do not use 'update' option because daemon might have been killed during copy.
+      # In this case 'copy' dir has newer but corrupted file.
       save_in_copy_dir
       unmount_tmpfs
       restore_from_copy_dir
