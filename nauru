@@ -14,12 +14,13 @@
 #
 
 # Warning: no spaces allowed in paths
-ORIGINAL_DIR=/home/lawa/.config/dconf
+ORIGINAL_DIR=/home/bsp/.config/dconf
 COPY_DIR=$ORIGINAL_DIR-nauru
 OWNER=bsp
-PID_FILE=/tmp/nauru.pid
+OWNER_GROUP=bsp
+PID_FILE=/var/run/nauru.pid
 DAEMON_SCRIPT=/usr/local/lib/naurud.py
-DAEMON="python3 -u $DAEMON_SCRIPT $PID_FILE"
+DAEMON="python3 -u $DAEMON_SCRIPT $PID_FILE $ORIGINAL_DIR $COPY_DIR $OWNER $OWNER_GROUP"
 REDIRECT=/dev/null
 
 mount_tmpfs() {
@@ -79,6 +80,7 @@ case "$1" in
   
   stop)       
     CURR_PID=`cat $PID_FILE`
+    rm -f $PID_FILE
     echo "PID: $CURR_PID"
     if [ -n "$CURR_PID" ]; then
       echo "Stopping $DAEMON"     
@@ -86,13 +88,12 @@ case "$1" in
       kill $CURR_PID
       KILL_RESULT=$?
       if [ "$KILL_RESULT" = "0" ]; then
-        echo "Killed"
-        rm -f $PID_FILE   
+        echo "Killed"          
       else
         echo "Failed to kill"
         exit 1
       fi
-            
+                  
       save_in_copy_dir
       unmount_tmpfs
       restore_from_copy_dir
